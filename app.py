@@ -2,14 +2,14 @@ from flask import Flask, jsonify, render_template_string, request, redirect, url
 
 app = Flask(__name__)
 
-# === Sample In-Memory Database ===
+# === In-memory database (temporary; resets when app restarts) ===
 students = [
     {"id": 1, "name": "Juan Dela Cruz", "grade": 10, "section": "Zechariah"},
     {"id": 2, "name": "Maria Santos", "grade": 9, "section": "Gabriel"}
 ]
 next_id = 3
 
-# === Shared HTML Template with Styling ===
+# === Global CSS Style (applied to all pages) ===
 base_style = """
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
@@ -76,57 +76,72 @@ base_style = """
 </style>
 """
 
-# === Home Page ===
+# === HOME PAGE ===
 @app.route('/')
 def home():
     html = f"""
     <!DOCTYPE html>
-    <html>
+    <html lang="en">
     <head><title>Flask Student API</title>{base_style}</head>
     <body>
         <div class="container text-center">
             <h1>🎓 Flask Student API</h1>
-            <p>Welcome! Manage student data with CRUD and API support.</p>
+            <p>Manage student data with CRUD functionality and API support.</p>
             <a href="/students" class="btn btn-custom m-2">📋 View Students</a>
             <a href="/add" class="btn btn-custom m-2">➕ Add Student</a>
             <a href="/api/students" class="btn btn-custom m-2">🌐 View JSON API</a>
         </div>
-        <footer>© 2025 Flask Student API • Crafted with 💙 Bootstrap</footer>
+        <footer>© 2025 Flask Student API • Crafted with 💙 using Bootstrap</footer>
     </body>
     </html>
     """
     return render_template_string(html)
 
-# === View Students ===
+# === VIEW STUDENTS PAGE ===
 @app.route('/students')
 def view_students():
+    rows = ""
+    for s in students:
+        rows += f"""
+        <tr>
+            <td>{s['id']}</td>
+            <td>{s['name']}</td>
+            <td>{s['grade']}</td>
+            <td>{s['section']}</td>
+            <td>
+                <a href='/edit/{s['id']}' class='btn btn-sm btn-warning me-2'>✏️ Edit</a>
+                <a href='/delete/{s['id']}' class='btn btn-sm btn-danger'>🗑 Delete</a>
+            </td>
+        </tr>
+        """
+
     html = f"""
     <!DOCTYPE html>
-    <html>
+    <html lang="en">
     <head><title>Students</title>{base_style}</head>
     <body>
         <div class="container">
             <h1>📋 Student List</h1>
             <table class="table table-striped table-hover mt-3">
                 <thead>
-                    <tr><th>ID</th><th>Name</th><th>Grade</th><th>Section</th><th>Actions</th></tr>
+                    <tr>
+                        <th>ID</th><th>Name</th><th>Grade</th><th>Section</th><th>Actions</th>
+                    </tr>
                 </thead>
-                <tbody>
-                    {''.join(f"<tr><td>{{s['id']}}</td><td>{{s['name']}}</td><td>{{s['grade']}}</td><td>{{s['section']}}</td><td><a href='/edit/{{s['id']}}' class='btn btn-sm btn-warning me-2'>✏️ Edit</a><a href='/delete/{{s['id']}}' class='btn btn-sm btn-danger'>🗑 Delete</a></td></tr>" for s in students)}
-                </tbody>
+                <tbody>{rows}</tbody>
             </table>
             <div class="text-center">
                 <a href="/add" class="btn btn-custom mt-3">➕ Add Student</a>
-                <a href="/" class="btn btn-secondary mt-3">🏠 Back</a>
+                <a href="/" class="btn btn-secondary mt-3">🏠 Back to Home</a>
             </div>
         </div>
         <footer>© 2025 Flask Student API</footer>
     </body>
     </html>
     """
-    return render_template_string(html, students=students)
+    return render_template_string(html)
 
-# === Add Student ===
+# === ADD STUDENT PAGE ===
 @app.route('/add', methods=['GET', 'POST'])
 def add_student():
     global next_id
@@ -134,17 +149,22 @@ def add_student():
         name = request.form['name']
         grade = request.form['grade']
         section = request.form['section']
-        students.append({"id": next_id, "name": name, "grade": int(grade), "section": section})
+        students.append({
+            "id": next_id,
+            "name": name,
+            "grade": int(grade),
+            "section": section
+        })
         next_id += 1
         return redirect(url_for('view_students'))
 
     html = f"""
     <!DOCTYPE html>
-    <html>
+    <html lang="en">
     <head><title>Add Student</title>{base_style}</head>
     <body>
         <div class="container">
-            <h1>➕ Add Student</h1>
+            <h1>➕ Add New Student</h1>
             <form method="POST">
                 <div class="mb-3">
                     <label class="form-label">Full Name</label>
@@ -158,7 +178,7 @@ def add_student():
                     <label class="form-label">Section</label>
                     <input type="text" class="form-control" name="section" required>
                 </div>
-                <button class="btn btn-custom" type="submit">Add Student</button>
+                <button type="submit" class="btn btn-custom">Add Student</button>
                 <a href="/students" class="btn btn-secondary">Cancel</a>
             </form>
         </div>
@@ -168,7 +188,7 @@ def add_student():
     """
     return render_template_string(html)
 
-# === Edit Student ===
+# === EDIT STUDENT PAGE ===
 @app.route('/edit/<int:id>', methods=['GET', 'POST'])
 def edit_student(id):
     student = next((s for s in students if s['id'] == id), None)
@@ -183,7 +203,7 @@ def edit_student(id):
 
     html = f"""
     <!DOCTYPE html>
-    <html>
+    <html lang="en">
     <head><title>Edit Student</title>{base_style}</head>
     <body>
         <div class="container">
@@ -201,7 +221,7 @@ def edit_student(id):
                     <label class="form-label">Section</label>
                     <input type="text" class="form-control" name="section" value="{student['section']}" required>
                 </div>
-                <button class="btn btn-custom" type="submit">Save Changes</button>
+                <button type="submit" class="btn btn-custom">Save Changes</button>
                 <a href="/students" class="btn btn-secondary">Cancel</a>
             </form>
         </div>
@@ -211,18 +231,18 @@ def edit_student(id):
     """
     return render_template_string(html)
 
-# === Delete Student ===
+# === DELETE STUDENT FUNCTION ===
 @app.route('/delete/<int:id>')
 def delete_student(id):
     global students
     students = [s for s in students if s['id'] != id]
     return redirect(url_for('view_students'))
 
-# === JSON API ===
+# === API ENDPOINT (JSON) ===
 @app.route('/api/students')
 def api_students():
     return jsonify(students)
 
-# === Run App ===
+# === RUN APP ===
 if __name__ == '__main__':
     app.run(debug=True)
