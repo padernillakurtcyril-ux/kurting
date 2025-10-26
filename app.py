@@ -1,15 +1,15 @@
-from flask import Flask, jsonify, render_template_string, request, redirect, url_for
+from flask import Flask, render_template_string, request, redirect, url_for
 
 app = Flask(__name__)
 
 # === In-memory database (temporary; resets when app restarts) ===
 students = [
-    {"id": 1, "name": "Juan Dela Cruz", "grade": 10, "section": "Zechariah"},
-    {"id": 2, "name": "Maria Santos", "grade": 9, "section": "Gabriel"}
+    {"id": 1, "name": "Juan Dela Cruz", "year": "1st Year", "section": "Zechariah"},
+    {"id": 2, "name": "Maria Santos", "year": "2nd Year", "section": "Gabriel"}
 ]
 next_id = 3
 
-# === Global CSS Style (applied to all pages) ===
+# === Global CSS Style ===
 base_style = """
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
@@ -30,7 +30,7 @@ base_style = """
         padding: 2rem 2.5rem;
         margin-top: 3rem;
         box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-        max-width: 700px;
+        max-width: 800px;
         width: 90%;
         animation: fadeUp 0.8s ease;
     }
@@ -82,31 +82,33 @@ def home():
     html = f"""
     <!DOCTYPE html>
     <html lang="en">
-    <head><title>Flask Student API</title>{base_style}</head>
+    <head><title>Flask Student System</title>{base_style}</head>
     <body>
         <div class="container text-center">
-            <h1>🎓 Flask Student API</h1>
-            <p>Manage student data with CRUD functionality and API support.</p>
+            <h1>🎓 Flask Student System</h1>
+            <p>Manage student data easily with this beautiful CRUD app.</p>
             <a href="/students" class="btn btn-custom m-2">📋 View Students</a>
             <a href="/add" class="btn btn-custom m-2">➕ Add Student</a>
-            <a href="/api/students" class="btn btn-custom m-2">🌐 View JSON API</a>
         </div>
-        <footer>© 2025 Flask Student API • Crafted with 💙 using Bootstrap</footer>
+        <footer>© 2025 Flask Student System • Crafted with 💙 using Bootstrap</footer>
     </body>
     </html>
     """
     return render_template_string(html)
 
-# === VIEW STUDENTS PAGE ===
+# === VIEW STUDENTS PAGE (with search/filter) ===
 @app.route('/students')
 def view_students():
+    query = request.args.get('q', '').lower()
+    filtered = [s for s in students if query in s['name'].lower() or query in s['year'].lower()]
+
     rows = ""
-    for s in students:
+    for s in filtered:
         rows += f"""
         <tr>
             <td>{s['id']}</td>
             <td>{s['name']}</td>
-            <td>{s['grade']}</td>
+            <td>{s['year']}</td>
             <td>{s['section']}</td>
             <td>
                 <a href='/edit/{s['id']}' class='btn btn-sm btn-warning me-2'>✏️ Edit</a>
@@ -122,10 +124,14 @@ def view_students():
     <body>
         <div class="container">
             <h1>📋 Student List</h1>
+            <form method="GET" class="d-flex mb-3">
+                <input type="text" name="q" value="{query}" class="form-control me-2" placeholder="🔍 Search by name or year...">
+                <button class="btn btn-custom" type="submit">Search</button>
+            </form>
             <table class="table table-striped table-hover mt-3">
                 <thead>
                     <tr>
-                        <th>ID</th><th>Name</th><th>Grade</th><th>Section</th><th>Actions</th>
+                        <th>ID</th><th>Name</th><th>Year Level</th><th>Section</th><th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>{rows}</tbody>
@@ -135,7 +141,7 @@ def view_students():
                 <a href="/" class="btn btn-secondary mt-3">🏠 Back to Home</a>
             </div>
         </div>
-        <footer>© 2025 Flask Student API</footer>
+        <footer>© 2025 Flask Student System</footer>
     </body>
     </html>
     """
@@ -147,12 +153,12 @@ def add_student():
     global next_id
     if request.method == 'POST':
         name = request.form['name']
-        grade = request.form['grade']
+        year = request.form['year']
         section = request.form['section']
         students.append({
             "id": next_id,
             "name": name,
-            "grade": int(grade),
+            "year": year,
             "section": section
         })
         next_id += 1
@@ -171,8 +177,14 @@ def add_student():
                     <input type="text" class="form-control" name="name" required>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Grade</label>
-                    <input type="number" class="form-control" name="grade" required>
+                    <label class="form-label">Year Level</label>
+                    <select name="year" class="form-control" required>
+                        <option value="">Select Year</option>
+                        <option>1st Year</option>
+                        <option>2nd Year</option>
+                        <option>3rd Year</option>
+                        <option>4th Year</option>
+                    </select>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Section</label>
@@ -182,7 +194,7 @@ def add_student():
                 <a href="/students" class="btn btn-secondary">Cancel</a>
             </form>
         </div>
-        <footer>© 2025 Flask Student API</footer>
+        <footer>© 2025 Flask Student System</footer>
     </body>
     </html>
     """
@@ -197,7 +209,7 @@ def edit_student(id):
 
     if request.method == 'POST':
         student['name'] = request.form['name']
-        student['grade'] = int(request.form['grade'])
+        student['year'] = request.form['year']
         student['section'] = request.form['section']
         return redirect(url_for('view_students'))
 
@@ -214,8 +226,13 @@ def edit_student(id):
                     <input type="text" class="form-control" name="name" value="{student['name']}" required>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Grade</label>
-                    <input type="number" class="form-control" name="grade" value="{student['grade']}" required>
+                    <label class="form-label">Year Level</label>
+                    <select name="year" class="form-control" required>
+                        <option { 'selected' if student['year'] == '1st Year' else '' }>1st Year</option>
+                        <option { 'selected' if student['year'] == '2nd Year' else '' }>2nd Year</option>
+                        <option { 'selected' if student['year'] == '3rd Year' else '' }>3rd Year</option>
+                        <option { 'selected' if student['year'] == '4th Year' else '' }>4th Year</option>
+                    </select>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Section</label>
@@ -225,7 +242,7 @@ def edit_student(id):
                 <a href="/students" class="btn btn-secondary">Cancel</a>
             </form>
         </div>
-        <footer>© 2025 Flask Student API</footer>
+        <footer>© 2025 Flask Student System</footer>
     </body>
     </html>
     """
@@ -237,11 +254,6 @@ def delete_student(id):
     global students
     students = [s for s in students if s['id'] != id]
     return redirect(url_for('view_students'))
-
-# === API ENDPOINT (JSON) ===
-@app.route('/api/students')
-def api_students():
-    return jsonify(students)
 
 # === RUN APP ===
 if __name__ == '__main__':
