@@ -1,114 +1,228 @@
-from flask import Flask, jsonify, render_template_string
+from flask import Flask, jsonify, render_template_string, request, redirect, url_for
 
 app = Flask(__name__)
 
+# === Sample In-Memory Database ===
+students = [
+    {"id": 1, "name": "Juan Dela Cruz", "grade": 10, "section": "Zechariah"},
+    {"id": 2, "name": "Maria Santos", "grade": 9, "section": "Gabriel"}
+]
+next_id = 3
+
+# === Shared HTML Template with Styling ===
+base_style = """
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+    body {
+        background: linear-gradient(120deg, #4b6cb7, #182848);
+        font-family: 'Poppins', sans-serif;
+        color: #fff;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    .container {
+        background: rgba(255,255,255,0.97);
+        color: #333;
+        border-radius: 20px;
+        padding: 2rem 2.5rem;
+        margin-top: 3rem;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        max-width: 700px;
+        width: 90%;
+        animation: fadeUp 0.8s ease;
+    }
+    h1 {
+        font-weight: 700;
+        color: #182848;
+        text-align: center;
+        margin-bottom: 1rem;
+    }
+    a.btn-custom, button.btn-custom {
+        background: linear-gradient(135deg, #4b6cb7, #182848);
+        color: #fff !important;
+        border-radius: 12px;
+        border: none;
+        padding: 0.6rem 1.5rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-block;
+    }
+    a.btn-custom:hover, button.btn-custom:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 18px rgba(0,0,0,0.3);
+    }
+    .table {
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    .table th {
+        background: #4b6cb7;
+        color: white;
+    }
+    footer {
+        color: rgba(255,255,255,0.8);
+        margin-top: auto;
+        text-align: center;
+        padding: 15px 0;
+    }
+    @keyframes fadeUp {
+        from {opacity: 0; transform: translateY(30px);}
+        to {opacity: 1; transform: translateY(0);}
+    }
+</style>
+"""
+
+# === Home Page ===
 @app.route('/')
 def home():
-    html = """
+    html = f"""
     <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <title>Flask Student API</title>
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-        <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
-        <style>
-            body {
-                background: linear-gradient(120deg, #4b6cb7, #182848);
-                font-family: 'Poppins', sans-serif;
-                color: #fff;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                height: 100vh;
-                margin: 0;
-                overflow: hidden;
-            }
-            .card {
-                background: rgba(255, 255, 255, 0.95);
-                color: #333;
-                border-radius: 20px;
-                padding: 2.5rem;
-                max-width: 500px;
-                text-align: center;
-                box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-                animation: slideUp 1s ease forwards;
-            }
-            .card h1 {
-                font-weight: 700;
-                color: #182848;
-                margin-bottom: 0.5rem;
-                font-size: 2rem;
-            }
-            .card p {
-                font-size: 1.1rem;
-                color: #444;
-                margin-bottom: 1.5rem;
-            }
-            .btn-custom {
-                background: linear-gradient(135deg, #4b6cb7, #182848);
-                color: white;
-                border: none;
-                border-radius: 12px;
-                padding: 0.8rem 1.8rem;
-                font-weight: 600;
-                transition: all 0.3s ease;
-                text-decoration: none;
-                display: inline-block;
-            }
-            .btn-custom:hover {
-                transform: translateY(-3px);
-                box-shadow: 0 8px 18px rgba(0, 0, 0, 0.3);
-                color: #fff;
-            }
-            footer {
-                position: fixed;
-                bottom: 10px;
-                font-size: 0.9rem;
-                color: rgba(255, 255, 255, 0.8);
-                text-align: center;
-                width: 100%;
-            }
-            .glow {
-                color: #fff;
-                text-shadow: 0 0 10px #4b6cb7, 0 0 20px #4b6cb7, 0 0 30px #4b6cb7;
-                animation: glowPulse 2s infinite alternate;
-            }
-            @keyframes slideUp {
-                from { opacity: 0; transform: translateY(40px); }
-                to { opacity: 1; transform: translateY(0); }
-            }
-            @keyframes glowPulse {
-                from { text-shadow: 0 0 10px #4b6cb7, 0 0 20px #4b6cb7; }
-                to { text-shadow: 0 0 25px #6f86d6, 0 0 40px #6f86d6; }
-            }
-        </style>
-    </head>
+    <html>
+    <head><title>Flask Student API</title>{base_style}</head>
     <body>
-        <div class="card">
-            <h1 class="glow">🎓 Flask Student API</h1>
-            <p>Welcome! This is your gateway to the <b>Student Information API</b>.</p>
-            <a href="/student" class="btn btn-custom">View Student JSON Data</a>
-            <hr class="mt-4 mb-3" style="border-color:#ddd;">
-            <p style="font-size: 0.95rem; color: #666;">Click the button above to fetch real-time student data in JSON format.</p>
+        <div class="container text-center">
+            <h1>🎓 Flask Student API</h1>
+            <p>Welcome! Manage student data with CRUD and API support.</p>
+            <a href="/students" class="btn btn-custom m-2">📋 View Students</a>
+            <a href="/add" class="btn btn-custom m-2">➕ Add Student</a>
+            <a href="/api/students" class="btn btn-custom m-2">🌐 View JSON API</a>
         </div>
-
-        <footer>
-            © 2025 Flask Student API • Crafted with 💙 using Bootstrap 5
-        </footer>
+        <footer>© 2025 Flask Student API • Crafted with 💙 Bootstrap</footer>
     </body>
     </html>
     """
     return render_template_string(html)
 
-@app.route('/student')
-def get_student():
-    student_data = {
-        "name": "Juan Dela Cruz",
-        "grade": 10,
-        "section": "Zechariah"
-    }
-    return jsonify(student_data)
+# === View Students ===
+@app.route('/students')
+def view_students():
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head><title>Students</title>{base_style}</head>
+    <body>
+        <div class="container">
+            <h1>📋 Student List</h1>
+            <table class="table table-striped table-hover mt-3">
+                <thead>
+                    <tr><th>ID</th><th>Name</th><th>Grade</th><th>Section</th><th>Actions</th></tr>
+                </thead>
+                <tbody>
+                    {''.join(f"<tr><td>{{s['id']}}</td><td>{{s['name']}}</td><td>{{s['grade']}}</td><td>{{s['section']}}</td><td><a href='/edit/{{s['id']}}' class='btn btn-sm btn-warning me-2'>✏️ Edit</a><a href='/delete/{{s['id']}}' class='btn btn-sm btn-danger'>🗑 Delete</a></td></tr>" for s in students)}
+                </tbody>
+            </table>
+            <div class="text-center">
+                <a href="/add" class="btn btn-custom mt-3">➕ Add Student</a>
+                <a href="/" class="btn btn-secondary mt-3">🏠 Back</a>
+            </div>
+        </div>
+        <footer>© 2025 Flask Student API</footer>
+    </body>
+    </html>
+    """
+    return render_template_string(html, students=students)
 
+# === Add Student ===
+@app.route('/add', methods=['GET', 'POST'])
+def add_student():
+    global next_id
+    if request.method == 'POST':
+        name = request.form['name']
+        grade = request.form['grade']
+        section = request.form['section']
+        students.append({"id": next_id, "name": name, "grade": int(grade), "section": section})
+        next_id += 1
+        return redirect(url_for('view_students'))
+
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head><title>Add Student</title>{base_style}</head>
+    <body>
+        <div class="container">
+            <h1>➕ Add Student</h1>
+            <form method="POST">
+                <div class="mb-3">
+                    <label class="form-label">Full Name</label>
+                    <input type="text" class="form-control" name="name" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Grade</label>
+                    <input type="number" class="form-control" name="grade" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Section</label>
+                    <input type="text" class="form-control" name="section" required>
+                </div>
+                <button class="btn btn-custom" type="submit">Add Student</button>
+                <a href="/students" class="btn btn-secondary">Cancel</a>
+            </form>
+        </div>
+        <footer>© 2025 Flask Student API</footer>
+    </body>
+    </html>
+    """
+    return render_template_string(html)
+
+# === Edit Student ===
+@app.route('/edit/<int:id>', methods=['GET', 'POST'])
+def edit_student(id):
+    student = next((s for s in students if s['id'] == id), None)
+    if not student:
+        return "Student not found", 404
+
+    if request.method == 'POST':
+        student['name'] = request.form['name']
+        student['grade'] = int(request.form['grade'])
+        student['section'] = request.form['section']
+        return redirect(url_for('view_students'))
+
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head><title>Edit Student</title>{base_style}</head>
+    <body>
+        <div class="container">
+            <h1>✏️ Edit Student</h1>
+            <form method="POST">
+                <div class="mb-3">
+                    <label class="form-label">Full Name</label>
+                    <input type="text" class="form-control" name="name" value="{student['name']}" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Grade</label>
+                    <input type="number" class="form-control" name="grade" value="{student['grade']}" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Section</label>
+                    <input type="text" class="form-control" name="section" value="{student['section']}" required>
+                </div>
+                <button class="btn btn-custom" type="submit">Save Changes</button>
+                <a href="/students" class="btn btn-secondary">Cancel</a>
+            </form>
+        </div>
+        <footer>© 2025 Flask Student API</footer>
+    </body>
+    </html>
+    """
+    return render_template_string(html)
+
+# === Delete Student ===
+@app.route('/delete/<int:id>')
+def delete_student(id):
+    global students
+    students = [s for s in students if s['id'] != id]
+    return redirect(url_for('view_students'))
+
+# === JSON API ===
+@app.route('/api/students')
+def api_students():
+    return jsonify(students)
+
+# === Run App ===
 if __name__ == '__main__':
     app.run(debug=True)
